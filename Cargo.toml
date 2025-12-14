@@ -1,17 +1,20 @@
 [package]
 name = "las-crs"
-version = "0.1.1"
-edition = "2021"
+version = "1.0.0"
+edition = "2024"
 authors = ["Øyvind Hjermstad <@yvind>"]
-description = "Get the CRS from a las::Header"
+documentation = "https://docs.rs/las-crs"
+description = "Get the CRS as an EPSG code from a las::Header"
 homepage = "https://github.com/yvind/las-crs"
 repository = "https://github.com/yvind/las-crs"
 readme = "README.md"
 license = "MIT"
-keywords = ["lidar", "crs"]
+keywords = ["lidar", "crs", "epsg", "gis"]
 
 [dependencies]
-byteorder = "1.5"
-las = "0.9"
+las = { git = "https://github.com/yvind/las-rs" }
 log = "0.4"
 thiserror = "2.0"
+
+[dev-dependencies]
+las = { git = "https://github.com/yvind/las-rs", features = ["laz"] }
