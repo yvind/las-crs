@@ -12,9 +12,9 @@ license = "MIT"
 keywords = ["lidar", "crs", "epsg", "gis"]
 
 [dependencies]
-las = { git = "https://github.com/yvind/las-rs" }
+las = "0.9.8"
 log = "0.4"
 thiserror = "2.0"
 
 [dev-dependencies]
-las = { git = "https://github.com/yvind/las-rs", features = ["laz"] }
+las = { version = "0.9.8", features = ["laz"] }
