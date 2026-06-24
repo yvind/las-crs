@@ -1,6 +1,6 @@
 [package]
 name = "las-crs"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2024"
 authors = ["Øyvind Hjermstad <@yvind>"]
 documentation = "https://docs.rs/las-crs"
@@ -12,9 +12,9 @@ license = "MIT"
 keywords = ["lidar", "crs", "epsg", "gis"]
 
 [dependencies]
-las = "0.9.8"
+las = "0.9.11"
 log = "0.4"
 thiserror = "2.0"
 
 [dev-dependencies]
-las = { version = "0.9.8", features = ["laz"] }
+las = { version = "0.9.11", features = ["laz"] }

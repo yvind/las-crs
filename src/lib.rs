@@ -22,16 +22,13 @@
 //! If you have a Lidar file with CRS defined in this way please make an issue on Github so I can create tests for it
 //! I have yet to see a Lidar file with CRS defined in that way
 
-use las::{
-    Header,
-    crs::{GeoTiffCrs, GeoTiffData},
-};
+use las::{Header, crs::GeoTiffCrs};
 use log::{Level, log};
 use thiserror::Error;
 
 type Result<T> = std::result::Result<T, Error>;
 
-pub const EPSG_RANGE: std::ops::RangeInclusive<u16> = 1024..=(i16::MAX as u16);
+pub const EPSG_RANGE: std::ops::Range<u16> = 1024..(i16::MAX as u16);
 
 /// Horizontal and optional vertical CRS given by EPSG code(s)
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -128,12 +125,12 @@ pub enum Error {
     /// Could not parse the CRS from the WKT-data
     #[error("Unable to parse the found WKT-CRS (E)VLR")]
     UnreadableWktCrs,
+    /// Could not parse the CRS from the GeoTiff-data
+    #[error("Unknown GeoTiff model type in GeoTiff EVLR")]
+    UnreadableGeoTiffCrs,
     /// The parsed horizontal code is outside of [EPSG_RANGE]
     #[error("The parsed code for the horizontal component is outside of the EPSG-range")]
     BadHorizontalCodeParsed(EpsgCRS),
-    /// Cannot parse EPSG code from ascii string or double data
-    #[error("The CRS parser does not handle CRS's defined by Geotiff String and Double data")]
-    UnimplementedForGeoTiffStringAndDoubleData(GeoTiffData),
     /// The provided code for setting is outside of EPSG_RANGE
     #[error("The provided code for setting is outside of EPSG_RANGE")]
     SetBadCode(u16),
@@ -285,47 +282,22 @@ pub fn get_epsg_from_wkt_crs_bytes(bytes: &[u8]) -> Result<EpsgCRS> {
 
 /// Get the EPSG code(s) from GeoTiff-CRS-data
 /// Only handles geotiff u16 data
-/// Returns ascii and double defined crs data in an [Error::UnimplementedForGeoTiffStringAndDoubleData]
 pub fn get_epsg_from_geotiff_crs(geotiff_crs_data: &GeoTiffCrs) -> Result<EpsgCRS> {
-    let mut out = (0, None);
-    for entry in geotiff_crs_data.entries.iter() {
-        match entry.id {
-            // 2048 and 3072 should not co-exist, but might both be combined with 4096
-            // 1024 should always exist
-            1024 => match &entry.data {
-                GeoTiffData::U16(0) => (), // should really not be zero, but let's rather error out later just in case
-                GeoTiffData::U16(1) => (), // projected crs
-                GeoTiffData::U16(2) => (), // geographic crs
-                GeoTiffData::U16(3) => (), // geographic + a vertical crs
-                GeoTiffData::U16(32_767) => return Err(Error::UserDefinedCrs),
-                _ => {
-                    return Err(Error::UnimplementedForGeoTiffStringAndDoubleData(
-                        entry.data.clone(),
-                    ));
-                }
-            },
-            2048 | 3072 => {
-                if let GeoTiffData::U16(v) = entry.data {
-                    out.0 = v;
-                }
-            }
-            4096 => {
-                // vertical crs
-                if let GeoTiffData::U16(v) = entry.data {
-                    out.1 = Some(v);
-                }
-            }
-            _ => (), // the rest are descriptions and units.
-        }
-    }
+    let horizontal = match geotiff_crs_data.get_gt_model_type_geo_key_value() {
+        Some(1) => geotiff_crs_data.get_projected_crs_geo_key_value(),
+        Some(2) | Some(3) => geotiff_crs_data.get_geodetic_crs_geo_key_value(),
+        Some(32767) => return Err(Error::UserDefinedCrs),
+        _ => return Err(Error::UnreadableGeoTiffCrs),
+    };
+    let vertical = geotiff_crs_data.get_vertical_crs_geo_key_value();
 
-    if out.0 == 0 {
-        Err(las::Error::UnreadableGeoTiffCrs)?
+    if horizontal.is_none() {
+        return Err(Error::UnreadableGeoTiffCrs);
     }
 
     let mut code = EpsgCRS {
-        horizontal: out.0,
-        vertical: out.1,
+        horizontal: horizontal.unwrap(),
+        vertical,
     };
 
     if !EPSG_RANGE.contains(&code.horizontal) {
