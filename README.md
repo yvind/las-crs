@@ -1,3 +1,5 @@
+This has been upstreamed to [las-rs](https://crates.io/crates/las) and will not be maintained anymore
+
 Small library for getting the CRS in the form of a EPSG code from lidar files.
 
 Either call `ParseEpsgCRS::get_epsg_crs` on a `las::Header` or use one of
